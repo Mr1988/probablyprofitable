@@ -23,6 +23,7 @@ from probablyprofit.agent.strategy import (
     MeanReversionStrategy,
     MomentumStrategy,
     NewsTradingStrategy,
+    QuantCompoundingStrategy,
     ValueStrategy,
     VolatilityStrategy,
 )
@@ -55,6 +56,7 @@ def parse_args():
             "volatility",
             "calendar",
             "arbitrage",
+            "quant-compounding",
         ],
         default="mean-reversion",
         help="Trading strategy to employ",
@@ -273,7 +275,9 @@ async def main():
         logger.info("📅 Using Calendar Strategy")
     elif args.strategy == "arbitrage":
         strategy = ArbitrageStrategy()
-        logger.info("🎯 Using Arbitrage Strategy")
+    elif args.strategy == "quant-compounding":
+        strategy = QuantCompoundingStrategy()
+        logger.info("🚀 Using Quant Compounding Strategy")
     elif args.strategy == "news":
         if not args.keywords:
             logger.error("❌ You must provide --keywords for news strategy")

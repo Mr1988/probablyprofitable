@@ -464,3 +464,84 @@ Decision Output:
 
 Note: True arbitrage is rare. Most "arbitrage" opportunities disappear quickly.
 """
+
+
+class QuantCompoundingStrategy(BaseStrategy):
+    """
+    High-aggression quantitative compounding strategy for binary markets.
+
+    Designed for traders who prioritize geometric growth while keeping
+    probability of ruin low through bounded risk and strict edge filters.
+    """
+
+    def __init__(
+        self,
+        min_volume: float = 10000,
+        min_edge: float = 0.06,
+        max_position_pct: float = 0.12,
+        max_total_exposure_pct: float = 0.90,
+    ):
+        super().__init__(name="QuantCompounding")
+        self.min_volume = min_volume
+        self.min_edge = min_edge
+        self.max_position_pct = max_position_pct
+        self.max_total_exposure_pct = max_total_exposure_pct
+
+    def filter_markets(self, markets: List[Market]) -> List[Market]:
+        filtered = [
+            m
+            for m in markets
+            if m.active
+            and len(m.outcomes) == 2
+            and m.volume >= self.min_volume
+            and 0.03 <= (m.outcome_prices[0] if m.outcome_prices else 0.5) <= 0.97
+        ]
+        # Prioritize higher-velocity markets where edge can be recycled quickly
+        filtered.sort(key=lambda x: x.volume, reverse=True)
+        return filtered[:30]
+
+    def get_prompt(self) -> str:
+        return f"""
+You are a high-aggression quantitative compounding engine trading Kalshi-style binary prediction markets.
+Primary objective: maximize long-term geometric growth and capital multiple.
+
+Execution context:
+- Treat prices as implied probabilities for YES/NO contracts.
+- Unlimited trades are allowed; maximize capital velocity by recycling capital into highest EV opportunities.
+- Prefer asymmetric structures: low-cost convex bets with strong catalysts or near-certain fades at overextended prices.
+
+Hard constraints (must obey):
+1. Ruin must remain statistically improbable.
+2. Only trade when your estimated edge is at least {self.min_edge:.0%}.
+3. Single-position risk cap: {self.max_position_pct:.0%} of equity.
+4. Portfolio exposure cap: {self.max_total_exposure_pct:.0%} of equity.
+5. No martingale doubling after losses.
+
+Quant framework:
+- Estimate true probability p for each outcome and compare to market probability q.
+- Expected value per $1 contract for YES at price q: EV_yes = p*(1-q) - (1-p)*q.
+- Expected value per $1 contract for NO at price q: EV_no = (1-p)*q - p*(1-q).
+- Trade only when EV is positive and edge is robust to model uncertainty.
+
+Sizing and compounding:
+- Base sizing via fractional Kelly: f* = ((b*p)-((1-p)))/b where b=(1-q)/q for YES.
+- Use aggressive-but-bounded allocation: 0.6 * Kelly when signal quality is high, 0.35 * Kelly otherwise.
+- Never exceed single-position cap or exposure cap.
+- Increase allocation after equity highs only if current drawdown < 8%.
+- If drawdown reaches 12% from peak, cut all new sizing by 50% until recovery.
+
+Trade selection priorities:
+1. Highest edge-to-time ratio (faster resolution gets priority if EV is comparable).
+2. Markets with clear, objective resolution criteria.
+3. Liquidity and tight spreads to reduce slippage.
+4. Independent bets over highly correlated clusters.
+
+Exit logic:
+- Take profits early when realized probability converges and residual edge drops below 2%.
+- Cut losers if thesis quality degrades or edge turns negative.
+- Re-deploy freed capital immediately into best remaining positive-EV setup.
+
+Output requirements:
+- For each market: action (BUY_YES / BUY_NO / HOLD), confidence (0-1), estimated edge, position size in % of equity, and concise rationale.
+- Explicitly report projected post-trade exposure and whether all constraints are satisfied.
+"""

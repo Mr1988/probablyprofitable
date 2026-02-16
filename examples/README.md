@@ -11,6 +11,7 @@ This folder contains example strategy prompts you can use with probablyprofit.
 | `value_hunting.txt` | Medium | Find mispriced markets |
 | `mean_reversion.txt` | Medium | Fade extreme prices |
 | `news_driven.txt` | Medium-High | React to breaking news |
+| `quant_compounding_kalshi.txt` | Very High | High-velocity geometric compounding with bounded ruin risk |
 
 ## Usage
 
@@ -23,6 +24,9 @@ python main.py --strategy custom --prompt-file examples/aggressive.txt
 
 # Combine with news intelligence
 python main.py --strategy custom --prompt-file examples/news_driven.txt --news --dry-run
+
+# Use the Kalshi quant compounding profile
+python main.py --strategy custom --prompt-file examples/quant_compounding_kalshi.txt --dry-run
 ```
 
 ## Writing Your Own

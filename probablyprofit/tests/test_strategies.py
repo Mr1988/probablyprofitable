@@ -7,7 +7,12 @@ import tempfile
 
 import pytest
 
-from probablyprofit.agent.strategy import CustomStrategy, MeanReversionStrategy, NewsTradingStrategy
+from probablyprofit.agent.strategy import (
+    CustomStrategy,
+    MeanReversionStrategy,
+    NewsTradingStrategy,
+    QuantCompoundingStrategy,
+)
 
 
 class TestMeanReversionStrategy:
@@ -53,6 +58,37 @@ class TestCustomStrategy:
         prompt = strategy.get_prompt()
 
         assert "Trade these keywords:" in prompt
+
+
+class TestQuantCompoundingStrategy:
+    def test_get_prompt_mentions_compounding_constraints(self):
+        strategy = QuantCompoundingStrategy()
+        prompt = strategy.get_prompt().lower()
+
+        assert "geometric growth" in prompt
+        assert "statistically improbable" in prompt
+        assert "fractional kelly" in prompt
+
+    def test_filter_markets_applies_binary_and_volume_rules(self):
+        strategy = QuantCompoundingStrategy(min_volume=10000)
+
+        class MockMarket:
+            def __init__(self, active, volume, outcomes, outcome_prices):
+                self.active = active
+                self.volume = volume
+                self.outcomes = outcomes
+                self.outcome_prices = outcome_prices
+
+        markets = [
+            MockMarket(True, 20000, ["YES", "NO"], [0.4, 0.6]),
+            MockMarket(True, 5000, ["YES", "NO"], [0.4, 0.6]),
+            MockMarket(False, 50000, ["YES", "NO"], [0.4, 0.6]),
+            MockMarket(True, 30000, ["YES"], [0.4]),
+        ]
+
+        filtered = strategy.filter_markets(markets)
+        assert len(filtered) == 1
+        assert filtered[0].volume == 20000
 
 
 class TestStrategyFiles:
